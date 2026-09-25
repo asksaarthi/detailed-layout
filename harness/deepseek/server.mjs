@@ -11,7 +11,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const PORT = Number(process.env.PORT || 8080);
 const MOCK = process.env.MOCK === "1";
-const KEY = process.env.DEEPSEEK_API_KEY || "";
+// trim + drop invisible separators a clipboard/password manager can silently tack on (U+2028/2029 line/paragraph
+// separators, zero-width spaces, a BOM) — these are invisible until they hit the strict check below
+const KEY = (process.env.DEEPSEEK_API_KEY || "").trim().replace(/[\u2028\u2029\u200b-\u200d\ufeff]/g, "");
 const BASE = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 if (!MOCK && !KEY) { console.error("Set DEEPSEEK_API_KEY (or MOCK=1 to run without DeepSeek)."); process.exit(1); }
