@@ -9,6 +9,8 @@ Gathered 25 Sep 2026 from `divya-ai` (`NEXT-STEPS.md` board, `HANDOVER-DEEPSEEK.
 
 | # | Thread | Priority | Waiting on | File |
 |---|---|---|---|---|
+| 00a | **Plan: exploring the context graph** | now | — | [00-context-graph-plan.md](00-context-graph-plan.md) |
+| 00b | **Plan: deployment (to her link)** | now | You (Mac deploy) | [00-deployment-plan.md](00-deployment-plan.md) |
 | 01 | Ship `main` (cab link `25g` + letters v2 `25h`) to her link | P0, before the 17:00 IST freeze | You (Mac deploy) | [01-ship-main-to-her-link.md](01-ship-main-to-her-link.md) |
 | 02 | T-05 flight-night watch, Fri 19:00 → Sat 01:00 IST | P0 | A Mac-side owner | [02-t05-flight-night-watch.md](02-t05-flight-night-watch.md) |
 | 03 | T-04 clean test rows out of her log | P1 | Your confirmed id list | [03-t04-clean-test-rows.md](03-t04-clean-test-rows.md) |
