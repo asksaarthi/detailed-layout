@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeepSeek dev chat</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100dvh; display: flex; flex-direction: column; background: #14141a; color: #e8e8ee; font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  header { padding: 10px 16px; border-bottom: 1px solid #2a2a34; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  header .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
+  header .dot.up { background: #4ade80; }
+  #log { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 78ch; white-space: pre-wrap; word-wrap: break-word; padding: 10px 14px; border-radius: 10px; }
+  .msg.user { align-self: flex-end; background: #2f5fd6; color: #fff; }
+  .msg.assistant { align-self: flex-start; background: #22222c; border: 1px solid #2a2a34; }
+  .msg.err { align-self: flex-start; background: #401d1d; border: 1px solid #6b2c2c; color: #ffb4b4; }
+  .msg code { background: #0009; padding: 0 4px; border-radius: 4px; font-size: 0.9em; }
+  .msg pre { background: #0009; padding: 10px; border-radius: 8px; overflow-x: auto; }
+  .msg pre code { background: none; padding: 0; }
+  form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #2a2a34; }
+  textarea { flex: 1; resize: none; background: #1b1b22; color: #e8e8ee; border: 1px solid #2a2a34; border-radius: 8px; padding: 10px 12px; font: inherit; height: 46px; max-height: 200px; }
+  button { background: #2f5fd6; color: #fff; border: none; border-radius: 8px; padding: 0 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #empty { margin: auto; color: #8a8a99; text-align: center; }
+</style>
+</head>
+<body>
+<header><span class="dot" id="dot"></span> DeepSeek dev chat <span id="who" style="font-weight:400;color:#8a8a99"></span></header>
+<div id="log"><div id="empty">Ask anything — this talks straight to DeepSeek, no booklet persona.</div></div>
+<form id="form">
+  <textarea id="input" placeholder="Message… (Enter to send, Shift+Enter for a new line)"></textarea>
+  <button id="send" type="submit">Send</button>
+</form>
+<script>
+  const log = document.getElementById("log"), empty = document.getElementById("empty");
+  const input = document.getElementById("input"), form = document.getElementById("form"), sendBtn = document.getElementById("send");
+  const dot = document.getElementById("dot"), who = document.getElementById("who");
+  const messages = [];
+
+  fetch("/state").then(r => r.ok ? (dot.className = "dot up") : null).catch(() => {});
+
+  function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+  function render(text) {  // minimal markdown: fenced code + inline code, nothing else
+    const parts = text.split(/```(\w*)\n?([\s\S]*?)```/g);
+    let html = "";
+    for (let i = 0; i < parts.length; i += 3) {
+      html += esc(parts[i] || "").replace(/`([^`]+)`/g, (_, c) => `<code>${esc(c)}</code>`);
+      if (parts[i + 2] != null) html += `<pre><code>${esc(parts[i + 2])}</code></pre>`;
+    }
+    return html;
+  }
+
+  function addMsg(role) {
+    empty.remove();
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  async function send(text) {
+    messages.push({ role: "user", content: text });
+    addMsg("user").textContent = text;
+    input.value = ""; input.style.height = "46px";
+    sendBtn.disabled = true;
+    const el = addMsg("assistant");
+    let acc = "";
+    try {
+      const r = await fetch("/devchat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages }) });
+      const rd = r.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { value, done } = await rd.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const line = buf.slice(0, i); buf = buf.slice(i + 2);
+          if (!line.startsWith("data:")) continue;
+          const o = JSON.parse(line.slice(5).trim());
+          if (o.d) { acc += o.d; el.innerHTML = render(acc); log.scrollTop = log.scrollHeight; }
+          if (o.error) { el.className = "msg err"; el.textContent = "Error: " + o.error; }
+        }
+      }
+    } catch (e) {
+      el.className = "msg err"; el.textContent = "Error: " + e.message;
+    }
+    if (acc) messages.push({ role: "assistant", content: acc });
+    sendBtn.disabled = false;
+    input.focus();
+  }
+
+  form.addEventListener("submit", e => { e.preventDefault(); const t = input.value.trim(); if (t) send(t); });
+  input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+  input.addEventListener("input", () => { input.style.height = "46px"; input.style.height = Math.min(200, input.scrollHeight) + "px"; });
+  input.focus();
+</script>
+</body>
+</html>

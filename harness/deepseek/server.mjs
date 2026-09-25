@@ -25,6 +25,7 @@ const PAGE = fs.readFileSync(path.join(ROOT, "index.html"), "utf8")
   .replace(/<(script|style|svg)[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")
   .replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
 const PERSONA = `You are Teddy 🧸, a warm, playful teddy bear who lives inside "Bangalore, in detail", an answer booklet Pranav wrote for Divya about her trip to Bangalore. You are Pranav's wingman — on his side, and on hers. Keep replies short (1–3 sentences), kind, a little funny, at most one emoji. Only state trip facts that appear in the booklet below; if you don't know, say so gently.\n\nThe booklet:\n${PAGE}`;
+const DEV_PERSONA = `You are a direct, capable coding assistant answering in a local dev chat page. Give concise, correct answers. Use fenced code blocks with a language tag for any code. Ask a clarifying question only when the request is genuinely ambiguous.`;
 
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
@@ -85,6 +86,18 @@ async function chat(b, res) {
   send({ done: true }); res.end();
 }
 
+async function devchat(b, res) {  // a plain coding-assistant chat, no booklet persona: POST {messages:[{role,content},…]}
+  res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
+  const send = o => res.write("data: " + JSON.stringify(o) + "\n\n");
+  try {
+    const msgs = [{ role: "system", content: DEV_PERSONA }, ...convo(b)];
+    if (msgs.length === 1) msgs.push({ role: "user", content: "(say hi)" });
+    if (MOCK) { for (const w of (await complete(msgs)).split(/(?<= )/)) { send({ d: w }); await new Promise(r => setTimeout(r, 30)); } }
+    else for await (const t of deltas(await deepseek(msgs, { stream: true }))) send({ d: t });
+  } catch (e) { log("devchat error", e.message); send({ error: e.message }); }
+  send({ done: true }); res.end();
+}
+
 const GENQUIZ = `Write 7 fresh, playful get-to-know-you questions from Teddy to Divya. Reply ONLY with JSON {"quiz":[{"q": string ≤ 200 chars, "opts": [[value ≤ 24 chars, label ≤ 60 chars with an emoji, Teddy's reaction ≤ 140 chars], … 2 to 4 options], "skip": Teddy's line if she skips}]}. Values are short lowercase slugs, unique within a question. Do not repeat or rephrase any of these earlier questions:\n`;
 async function genquiz(b, res) {
   let quiz = [];
@@ -109,6 +122,7 @@ http.createServer(async (req, res) => {
     const b = req.method === "POST" ? await readBody(req) : {};
     log(req.method, url.pathname, b.mode || "", b.messages?.at?.(-1)?.content?.slice(0, 80) || "");
     if (url.pathname === "/chat") return chat(b, res);
+    if (url.pathname === "/devchat") return devchat(b, res);
     if (url.pathname === "/genquiz") return genquiz(b, res);
     return json(res, 200, { ok: true });  // /answer, /state, /subscribe: accepted, never stored
   }
