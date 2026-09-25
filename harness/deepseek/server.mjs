@@ -15,6 +15,10 @@ const KEY = process.env.DEEPSEEK_API_KEY || "";
 const BASE = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
 const MODEL = process.env.DEEPSEEK_MODEL || "deepseek-chat";
 if (!MOCK && !KEY) { console.error("Set DEEPSEEK_API_KEY (or MOCK=1 to run without DeepSeek)."); process.exit(1); }
+if (!MOCK && !/^[\x21-\x7e]+$/.test(KEY)) {  // a key copied from a masked display carries "•" and can't go in a header
+  console.error("DEEPSEEK_API_KEY has characters that can't be in a key (e.g. • from a masked copy). Paste the full key from platform.deepseek.com.");
+  process.exit(1);
+}
 
 // What Teddy knows: the booklet's own visible text (scripts, styles and SVGs stripped).
 const PAGE = fs.readFileSync(path.join(ROOT, "index.html"), "utf8")
