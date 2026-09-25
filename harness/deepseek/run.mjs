@@ -42,7 +42,8 @@ const settle = async () => {  // wait until Teddy has stopped typing and the sen
 await page.goto(`${URL_}/?chat=${encodeURIComponent(URL_)}`, { waitUntil: "networkidle" });
 console.log("webdriver seen by page:", await page.evaluate(() => navigator.webdriver));
 await shot("booklet");
-await page.evaluate(() => document.querySelector("#tabTeddy").click());  // the tab can sit behind the phone menu
+await page.waitForSelector("#tabTeddy", { state: "attached", timeout: 15000 });
+await page.evaluate(() => document.querySelector("#tabTeddy").click());  // the tab can sit behind the phone menu, so a real (visible-only) click can't reach it
 await settle(); await shot("teddy-intro");
 if (await page.isVisible("#quizLater")) { await page.evaluate(() => document.querySelector("#quizLater").click()); await settle(); }  // skip the quiz: straight to free chat (the test-mode bar overlaps the button at 390px)
 
