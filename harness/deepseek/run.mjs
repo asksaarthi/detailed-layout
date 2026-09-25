@@ -1,5 +1,6 @@
 // Drives the booklet in headless Chrome against the local DeepSeek Teddy (server.mjs), and saves screenshots + a transcript.
 //   node harness/deepseek/run.mjs ["question" …]      (server.mjs must already be running; OUT=dir, URL=http://localhost:8080)
+//   HEADED=1 opens a visible Chrome window, to watch it on your own computer
 // Safety: test mode (sandbox) as the shared "guest" login, and every request that isn't localhost or Google Fonts is aborted,
 // so nothing reaches her log, her answers, the state mirror or the push server.
 // navigator.webdriver is reported false for this run only — otherwise the page (by design) answers with its canned local Teddy.
@@ -14,7 +15,7 @@ fs.mkdirSync(OUT, { recursive: true });
 const { chromium } = await import("playwright").catch(() =>  // a local install, else the global one
   import(path.join(execSync("npm root -g").toString().trim(), "playwright/index.js")).then(m => m.default || m));
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined, args: ["--disable-blink-features=AutomationControlled"] });
+const browser = await chromium.launch({ headless: process.env.HEADED !== "1", slowMo: process.env.HEADED === "1" ? 150 : 0, executablePath: process.env.CHROME || undefined, args: ["--disable-blink-features=AutomationControlled"] });
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: "block", ignoreHTTPSErrors: true });  // fonts only: a TLS-inspecting proxy re-signs them
 await ctx.route("**/*", r => {
   const h = new URL(r.request().url()).hostname;

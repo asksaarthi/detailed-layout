@@ -6,7 +6,11 @@ A local stand-in for Teddy's chat server that answers with DeepSeek, plus a head
 DEEPSEEK_API_KEY=sk-… harness/deepseek/run.sh                     # the three default questions
 DEEPSEEK_API_KEY=sk-… harness/deepseek/run.sh "Tell me about the moon thing 🌕" "What's Monday?"
 MOCK=1 harness/deepseek/run.sh                                     # no DeepSeek: checks the plumbing
+HEADED=1 DEEPSEEK_API_KEY=sk-… harness/deepseek/run.sh            # a visible Chrome window, to watch it
 ```
+
+On your own computer (Node 18+): `git clone https://github.com/asksaarthi/detailed-layout && cd detailed-layout`,
+then `npm i playwright && npx playwright install chromium` once, then any of the commands above.
 
 Screenshots and `transcript.txt` land in `harness/deepseek/out/` (gitignored); the server's log in `server.log`.
 Options: `DEEPSEEK_MODEL` (default `deepseek-chat`; `deepseek-reasoner` works too), `DEEPSEEK_BASE_URL`, `PORT`, `OUT`.
